@@ -48,7 +48,25 @@ def initializeRandomWeights(row,col):
         weights.append(r)
     return weights    
 
+#Matrix Multiplication
+def MatMul(X,Y):
+    Z=[]
+    for i in range(len(X)):
+        for j in range(len(Y[0])):
+            for k in range(len(Y)):
+                Z[i][j] += X[i][k] * Y[k][j]
+    return Z
 
+
+# our sigmoid function, tanh is a little nicer than the standard 1/(1+e^-x)
+def sigmoid(x):
+    return math.tanh(x)
+
+# derivative of our sigmoid function, in terms of the output (i.e. y)
+def dsigmoid(y):
+    return 1.0 - y**2
+
+        
 #Input Raw Data and get Preprocessed Data
 TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inactive.txt')
 
@@ -57,6 +75,8 @@ rows = len(TD[0])
 cols = len(TD)/2
 WL1 = initializeRandomWeights(rows,cols)
 WL2 = initializeRandomWeights(rows,cols)
+
+
 
 
 
