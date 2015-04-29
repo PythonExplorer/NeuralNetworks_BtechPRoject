@@ -5,7 +5,7 @@
 
 #Header Files and Imports
 import random
-
+import math
 #Reading the Data from txt files
 #ref : https://docs.python.org/2/tutorial/inputoutput.html#reading-and-writing-files
 def prepareInput(act_file,inact_file):
@@ -66,7 +66,35 @@ def sigmoid(x):
 def dsigmoid(y):
     return 1.0 - y**2
 
-        
+def forwardpropagate(XL1,Y,WL1,WL2):
+    XL2 = MatMul(XL1,WL1)
+    for i in range(len(XL2)):
+        for j in range(len(XL2[0])):
+            XL2[i][j] = sigmoid(XL2[i][j])
+    Output = MatMul(XL2,Y)
+    for i in range(len(Output)):
+        for j in range(len(Output[0])):
+            Output[i][j] = sigmoid(Output[i][j])
+            if Output[i][j] >= 0.5:
+                Output[i][j] = 1
+            else:
+                Output[i][j] = 0    
+    return Output
+
+#Compute the error
+def cost(actual,expected,inputCount):
+    JVal = 0
+    for i in range(len(actual)):
+        for j in range(len(actual[0])):
+            JVal += (actual[i][j]*log(expected[i][j]) + (1-actual[i][j])*log(1-expected[i][j]))
+    return ((Jval*1.0)/inputCount)  
+
+#Adjust the weights by back propagating the errors in each layer        
+def backpropagate(expected,actual):
+    dL3  = actual-expected
+
+
+
 #Input Raw Data and get Preprocessed Data
 TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inactive.txt')
 
