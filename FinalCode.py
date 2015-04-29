@@ -64,22 +64,20 @@ def sigmoid(x):
 
 # derivative of our sigmoid function, in terms of the output (i.e. y)
 def dsigmoid(y):
-    return 1.0 - y**2
+    return sigmoid(x)*(1-sigmoid(x))
 
 def forwardpropagate(XL1,Y,WL1,WL2):
     XL2 = MatMul(XL1,WL1)
+    ZL2 = XL2
     for i in range(len(XL2)):
         for j in range(len(XL2[0])):
             XL2[i][j] = sigmoid(XL2[i][j])
-    Output = MatMul(XL2,Y)
+    Output = MatMul(XL2,WL2)
+    ZL3 = Output
     for i in range(len(Output)):
         for j in range(len(Output[0])):
-            Output[i][j] = sigmoid(Output[i][j])
-            if Output[i][j] >= 0.5:
-                Output[i][j] = 1
-            else:
-                Output[i][j] = 0    
-    return Output
+            Output[i][j] = sigmoid(Output[i][j])   
+    return (Output,XL2,ZL2,ZL3)
 
 #Compute the error
 def cost(actual,expected,inputCount):
@@ -91,9 +89,20 @@ def cost(actual,expected,inputCount):
 
 #Adjust the weights by back propagating the errors in each layer        
 def backpropagate(expected,actual):
-    dL3  = actual-expected
-
-
+    dL3  = expected - actual
+    dL2  = dL3*WL2
+    for i in range(len(dL2)):
+        for j in range(len(dL2[0])):
+            dL2 = dL2*dsigmoid(ZL2[i][j])
+    DL2 = dL3 * XL2
+    DL1 = dL2 * XL1        
+    for i in range(len(DL1)):
+        for j in range(len(DL1[0])):
+            W1GRAD = (1.0/m)*DL1
+    for i in range(len(DL2)):
+        for j in range(len(DL2[0])):
+            W2GRAD = (1.0/m)*DL2
+    return (W1GRAD,W2GRAD)        
 
 #Input Raw Data and get Preprocessed Data
 TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inactive.txt')
@@ -105,6 +114,7 @@ WL1 = initializeRandomWeights(rows,cols)
 WL2 = initializeRandomWeights(rows,cols)
 
 
-
+Expected_Output , A2 , Z2 , Z3 = forwardpropagate(TD,TR,WL1,WL2)
+W1GRAD,W2GRAD = backpropagate(Expected_Output,TR)
 
 
