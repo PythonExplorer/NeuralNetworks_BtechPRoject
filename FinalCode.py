@@ -120,9 +120,6 @@ def featureScaling(X):
             maxval[i] = max(maxval[i],X[j][i])
             minval[i] = min(minval[i],X[j][i])
         sd[i] = maxval[i]-minval[i]
-        if sd[i] == 0:
-            cnt+=1
-
         mean[i] = (mean[i]*1.0)/row
     for i in range(row):
         for j in range(col):    
@@ -131,7 +128,6 @@ def featureScaling(X):
             except:
                 X[i][j] = 0
                 pass    
-    print(cnt)                
     return X
 
 
@@ -151,8 +147,6 @@ def backpropagate(expected,actual,XL1,XL2,Z2,m):
     print("Calculaing Delta-Caps")        
     DL2 = np.dot(transpose(XL2),dL3)
     DL1 = np.dot(transpose(XL1),dL2)
-    tW1GRAD = DL1
-    tW2GRAD = DL2        
     W1GRAD=[]
     W2GRAD=[]
     for i in range(len(DL1)):
@@ -172,7 +166,7 @@ def backpropagate(expected,actual,XL1,XL2,Z2,m):
 def recall(TP,FN):
     return (TP*1.0)/(TP+FN)
 
-def pecision(TP,FP):
+def precision(TP,FP):
     return (TP*1.0)/(TP+FP)
 
 def accuracy(TP,FP,TN,FN):
@@ -181,8 +175,33 @@ def accuracy(TP,FP,TN,FN):
 def F_score(p,r):
     return 2*p*r/(p+r)
 
+def metrics(expected,actual):
+    normalized_expected = []
+    for x in expected:
+        if x[0]>=0.7:
+            normalized_expected.append([1])
+        else:
+            normalized_expected.append([0])
+    TP=TN=FP=FN=0
+    for i in range(len(actual)):
+        if actual[i][0] == 1 and normalized_expected[i][0] == 0:
+            FN+=1
+        if actual[i][0] == 0 and normalized_expected[i][0] == 0:
+            TN+=1    
+        if actual[i][0] == 1 and normalized_expected[i][0] == 1:
+            TP+=1
+        if actual[i][0] == 0 and normalized_expected[i][0] == 1:
+            FP+=1
+    print("False Positives  : ",FP)
+    print("True Positives  : ",TP)
+    print("False Negitives  : ",FN)
+    print("True Negitives  : ",TN)
+    print("Accuracy  : ",accuracy(TP,FP,TN,FN))
+    print("Recall  : ",recall(TP,FN))
+    print("Precision  : ",precision(TP,FP))
+    print("F-Score  : ",F_score(precision(TP,FP),recall(TP,FN))) 
 
-
+    
 #Input Raw Data and get Preprocessed Data
 TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inactive.txt')
 
@@ -202,7 +221,7 @@ while 1:
     if abs(curr_cost - prev_cost) <= 0.0001:
         break
     print(curr_cost)    
-    print(accuracy(Expected_Output,TR))
+    print(metrics(Expected_Output,TR))
     prev_cost = curr_cost    
     print("Backward propagating")
     W1GRAD,W2GRAD = backpropagate(Expected_Output,TR,TD,A2,Z2,len(TD))
