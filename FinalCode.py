@@ -2,10 +2,10 @@
 #No of Hidden Layers and Nodes : http://goo.gl/OdBRY2
 #No of Hidden Layers and Nodes : http://goo.gl/Nb4GZp
 
-
 #Header Files and Imports
 import random
 import math
+import numpy as np
 #Reading the Data from txt files
 #ref : https://docs.python.org/2/tutorial/inputoutput.html#reading-and-writing-files
 def prepareInput(act_file,inact_file):
@@ -39,12 +39,12 @@ def prepareInput(act_file,inact_file):
     return (DataMatrix, OutputMatrix)
 
 #Intialize the weights to some random value before starting the training of the model
-def initializeRandomWeights(row,col):
+def initializeRandomWeights(row,col,a,b):
     weights= []
     for i in range(0,row):
         r = []
         for j in range(0, col):
-            r.append(random.uniform(10, 11))
+            r.append(random.uniform(a, b))
         weights.append(r)
     return weights    
 
@@ -61,28 +61,30 @@ def MatMul(X,Y):
     return Z
 
 
-# our sigmoid function, tanh is a little nicer than the standard 1/(1+e^-x)
+# our sigmoid function, standard 1/(1+e^-x)
 def sigmoid(x):
-    return 1/(1+pow(math.e,-1*x))
+    return 1/(1+(math.e**(-1*x)))
 
 # derivative of our sigmoid function, in terms of the output (i.e. y)
 def dsigmoid(x):
     return sigmoid(x)*(1-sigmoid(x))
 
 def forwardpropagate(XL1,Y,WL1,WL2):
-    XL2 = MatMul(XL1,WL1)
+    XL2 = np.dot(XL1,WL1)
     ZL2 = XL2
+    SXL2 = []
     for i in range(len(XL2)):
+        r = []
         for j in range(len(XL2[0])):
-            XL2[i][j] = sigmoid(XL2[i][j])
-    Output = MatMul(XL2,WL2)
+            r.append(sigmoid(XL2[i][j]))
+        SXL2.append(r)    
+    Output = np.dot(SXL2,WL2)
     ZL3 = Output
+    SOutput = [[0]*len(Output[0])]*len(Output)
     for i in range(len(Output)):
         for j in range(len(Output[0])):
-            Output[i][j] = sigmoid(Output[i][j])  
-            if Output[i][j] <0 or Output[i][j] >1:
-                print(Output[i][j])
-    return (Output,XL2,ZL2,ZL3)
+            SOutput[i][j] = sigmoid(Output[i][j]) 
+    return (SOutput,XL2,ZL2,ZL3)
 
 
 def transpose(X):
@@ -97,31 +99,89 @@ def cost(actual,expected,inputCount):
     JVal = 0
     for i in range(len(actual)):
         for j in range(len(actual[0])):
+            try:
                 JVal += (actual[i][j]*math.log(expected[i][j]) + (1-actual[i][j])*math.log(1-expected[i][j]))
+            except:
+                pass    
     return ((JVal*1.0)/inputCount)  
+
+#Normalize the Input Data - Important
+def featureScaling(X):
+    cnt=0
+    row = len(X)
+    col = len(X[0])
+    mean = [0]*col
+    sd = [0]*col
+    maxval = [-100000000000]*col
+    minval = [1000000000000]*col
+    for i in range(col):
+        for j in range(row):
+            mean[i]+=X[j][i]
+            maxval[i] = max(maxval[i],X[j][i])
+            minval[i] = min(minval[i],X[j][i])
+        sd[i] = maxval[i]-minval[i]
+        if sd[i] == 0:
+            cnt+=1
+
+        mean[i] = (mean[i]*1.0)/row
+    for i in range(row):
+        for j in range(col):    
+            try:
+                X[i][j] = ((X[i][j]-minval[j])*1.0)/(maxval[j]-minval[j])
+            except:
+                X[i][j] = 0
+                pass    
+    print(cnt)                
+    return X
+
 
 #Adjust the weights by back propagating the errors in each layer        
 def backpropagate(expected,actual,XL1,XL2,Z2,m):
-    dL3  = expected
+    dL3  = []
     for i in range(len(expected)):
-        dL3[i][0] = (expected[i][0] - actual[i][0])
+        dL3.append([(expected[i][0] - actual[i][0])])
     print("Calculaing Delta-2")    
-    dL2  = MatMul(dL3,transpose(WL2))
-    for i in range(len(dL2)):
-        for j in range(len(dL2[0])):
-            dL2[i][j] = dL2[i][j]*dsigmoid(Z2[i][j])
+    temp_dL2  = np.dot(dL3,transpose(WL2))
+    dL2 = []
+    for i in range(len(temp_dL2)):
+        r = []
+        for j in range(len(temp_dL2[0])):
+            r.append(temp_dL2[i][j]*dsigmoid(Z2[i][j]))
+        dL2.append(r)    
     print("Calculaing Delta-Caps")        
-    DL2 = MatMul(transpose(XL2),dL3)
-    DL1 = MatMul(transpose(XL1),dL2)
-    W1GRAD = DL1
-    W2GRAD = DL2        
+    DL2 = np.dot(transpose(XL2),dL3)
+    DL1 = np.dot(transpose(XL1),dL2)
+    tW1GRAD = DL1
+    tW2GRAD = DL2        
+    W1GRAD=[]
+    W2GRAD=[]
     for i in range(len(DL1)):
+        r = []
         for j in range(len(DL1[0])):
-            W1GRAD[i][j] = (1.0/m)*DL1[i][j]
+            r.append((1.0/m)*DL1[i][j])
+        W1GRAD.append(r)    
     for i in range(len(DL2)):
+        r=[]
         for j in range(len(DL2[0])):
-            W2GRAD[i][j] = (1.0/m)*DL2[i][j]
+            r.append((1.0/m)*DL2[i][j])
+        W2GRAD.append(r)    
     return (W1GRAD,W2GRAD)        
+
+#Formulaes for Data Metrics
+
+def recall(TP,FN):
+    return (TP*1.0)/(TP+FN)
+
+def pecision(TP,FP):
+    return (TP*1.0)/(TP+FP)
+
+def accuracy(TP,FP,TN,FN):
+    return ((TP+TN)*1.0)/(TP+FP+TN+FN)
+
+def F_score(p,r):
+    return 2*p*r/(p+r)
+
+
 
 #Input Raw Data and get Preprocessed Data
 TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inactive.txt')
@@ -129,27 +189,29 @@ TD, TR = prepareInput('Datasets/1332/1332- active.txt','Datasets/1332/1332- inac
 #Intialize the weights for both layers
 rows = len(TD[0])
 cols = len(TD)/2
-WL1 = initializeRandomWeights(rows,cols)
-WL2 = initializeRandomWeights(cols,1)
-
+WL1 = initializeRandomWeights(rows,cols,-0.01,0.01)
+WL2 = initializeRandomWeights(cols,1,-0.01,0.01)
 prev_cost = 1111111111
+
+print("Normalizing Data")
+TD = featureScaling(TD)
 while 1:
     print("Forward propagating")
     Expected_Output , A2 , Z2 , Z3 = forwardpropagate(TD,TR,WL1,WL2)
-    print("Calculaing Cost")
     curr_cost = cost(TR,Expected_Output,len(TR))
-    print(curr_cost)
-    if prev_cost ==  curr_cost:
+    if abs(curr_cost - prev_cost) <= 0.0001:
         break
+    print(curr_cost)    
+    print(accuracy(Expected_Output,TR))
     prev_cost = curr_cost    
     print("Backward propagating")
     W1GRAD,W2GRAD = backpropagate(Expected_Output,TR,TD,A2,Z2,len(TD))
+    
     for i in range(len(WL1)):
         for j in range(len(WL1[0])):
             WL1[i][j] = WL1[i][j] - W1GRAD[i][j]
     for i in range(len(WL2)):
         for j in range(len(WL2[0])):
             WL2[i][j] = WL2[i][j] - W2GRAD[i][j]            
-
 
 
